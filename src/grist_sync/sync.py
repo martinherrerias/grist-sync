@@ -199,13 +199,25 @@ def check_for_changes(columns, col_id, outdir: Path, basedir: Path):
     git@TAG in the remote formula header.
     """
 
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=basedir,
+            check=True,
+            capture_output=True,
+        )
+        git_root = out.stdout.decode().strip()
+        prefix = basedir.resolve().relative_to(git_root)
+    except (OSError, subprocess.SubprocessError, UnicodeDecodeError, ValueError) as exc:
+        raise ValueError(f"Not a git repository? '({basedir})': {exc}")
+
     formula = get_formula(columns, col_id)
     try:
-        tag = check_git_tag(formula, basedir)
-        src = col_id.lower() + ".py"
+        tag = check_git_tag(formula, git_root)
+        src = prefix / (col_id.lower() + ".py")
         out = subprocess.run(
             ["git", "show", f"{tag}:{src}"],
-            cwd=basedir,
+            cwd=git_root,
             check=True,
             capture_output=True,
         )
