@@ -53,9 +53,9 @@ def REGEXREPLACE(s: str, pattern: str, replacement: str) -> str:
 # Code outside blocks stays the same
 def my_function(record: Record, table: UserTable) -> str:
 
-  return = sorted(
+  return sorted(
     table.lookupRecords(user=record.user),
-      key=lambda r: REGEXREPLACE(record.user, r"[^a-zA-Z0-9]", "_"),
+      key=lambda r: REGEXREPLACE(r.user, r"[^a-zA-Z0-9]", "_"),
     )
 
 # <GRIST>
