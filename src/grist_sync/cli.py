@@ -12,7 +12,7 @@ from . import OutputName, render, sync
 
 def parse_args(args: Iterable[str] | None = None):
 
-    dotenv.load_dotenv()
+    dotenv.load_dotenv(Path.cwd() / ".env")
 
     parser = ArgumentParser(prog="gr")
     parser.add_argument(

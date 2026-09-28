@@ -5,19 +5,31 @@ Command-line utility to maintain a version-controlled repository of [Grist](http
 ## Setup and Configuration
 
 ```sh
-uv sync
-cp .env.template .env
+# System-wide install using uv
+uv tool install git+https://github.com/martinherrerias/grist-sync.git
+
+# gr should now be available in your path
+which gr
+
+# Copy the .env.template file to your project's .env
+curl -o .env.template https://raw.githubusercontent.com/martinherrerias/grist-sync/main/.env.template
+cat .env.template >> .env
+
 gr config
 gr --help
 ```
 
-Edit `.env` with the Grist server URL, document ID, and API key, etc. The template should be self documenting. Use `gr config` to check if your settings are being picked up as intended. See `gr --help` for further information, and available commands.
+Edit `.env` with the Grist server URL, document ID, and API key, etc. The template should be self documenting.
+
+Use `gr config` to check if your settings are being picked up as intended.
+See `gr --help` for further information, and available commands.
+
 
 ## Formula blocks
 
 Local code might need mocks and import placeholders to keep linters/type-checkers happy, as some classes and formulas are not available from an importable library. Similarly, things like an end return-statement are required in Grist but make no sense on a local module.
 
-We use commented blocks to keep Grist-specific quirks separate from local code, e.g.:
+Use commented blocks to keep Grist-specific quirks separate from local code, e.g.:
 
 ```python
 # <GRIST>
@@ -31,7 +43,7 @@ We use commented blocks to keep Grist-specific quirks separate from local code, 
 from typing import TypeAlias
 import re
 
-record: TypeAlias = object
+Record: TypeAlias = object
 UserTable: TypeAlias = object
 
 def REGEXREPLACE(s: str, pattern: str, replacement: str) -> str:
