@@ -1,0 +1,10 @@
+.vscode/
+.grist/
+uv.lock
+.ruff_cache/
+.venv/
+__pycache__/
+*.egg-info/
+
+.secrets/
+.env
