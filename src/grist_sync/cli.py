@@ -1,6 +1,7 @@
 """Command-line tool for synchronizing formulas with a Grist document."""
 
 import os
+import re
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from collections.abc import Iterable
 from pathlib import Path
@@ -33,16 +34,10 @@ def parse_args(cli_args: Iterable[str] | None = None):
         help="Grist document ID",
     )
     parser.add_argument(
-        "-t",
-        "--table",
-        default=os.getenv("GRIST_SYNC_TABLE_ID", "RUC"),
-        help="Grist table ID",
-    )
-    parser.add_argument(
         "-o",
         "--outdir",
         type=Path,
-        default=Path(os.getenv("GRIST_SYNC_OUTDIR", ".grist")),
+        default=Path(os.getenv("GRIST_SYNC_OUTDIR", ".grist/{doc}/{table}")),
         help="Output directory (default: %(default)s)",
     )
     parser.add_argument(
@@ -74,11 +69,35 @@ def parse_args(cli_args: Iterable[str] | None = None):
     api = GristDocAPI(args.doc, api_key=args.api_key, server=args.server)
     args.doc_name = api.call("").json()["name"]  # type: ignore
 
+    table_ids = [t["id"] for t in api.call("tables").json()["tables"]]
+    args.table = _select_tables(table_ids, args.table, False)
+
     args.outdir = Path(
         str(args.outdir).format(doc=args.doc_name, table=args.table)
     ).resolve()
 
     return args
+
+
+def _select_tables(
+    table_ids: list[str], pattern: str, multiple=False, regex=True
+) -> str | list[str]:
+
+    if regex:
+        picks = [t for t in table_ids if re.search(pattern, t, flags=re.IGNORECASE)]
+    else:
+        picks = [t for t in table_ids if t.lower() == pattern.lower()]
+    if not picks:
+        raise ValueError(f"No tables match {pattern!r}")
+    if len(picks) > 1 and not multiple:
+        if regex:
+            try:
+                return _select_tables(table_ids, pattern, regex=False, multiple=False)
+            except ValueError:
+                pass
+        raise ValueError(f"Found multiple tables matching {pattern!r}: {picks}")
+
+    return picks if multiple else picks[0]
 
 
 def _add_render_cmd(subparsers):
@@ -151,6 +170,12 @@ def _add_config_cmd(subparsers):
 
 def _add_cmd_args(parser: ArgumentParser, edit_args=True):
 
+    parser.add_argument(
+        "-t",
+        "--table",
+        default=os.getenv("GRIST_SYNC_TABLE_ID", "RUC"),
+        help="Grist table ID (can be a regex that matches a single existing table)",
+    )
     parser.add_argument(
         "-c",
         "--column-filter",
