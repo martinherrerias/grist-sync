@@ -73,6 +73,7 @@ def pull_formulas(api, table_id, outdir, filter=None):
             print(f"Skipping column '{col_id}': {exc}")
 
         out_file = OutputName.PULL.get(outdir, col_id)
+        formula = grist_to_local(formula)
         out_file.write_text(formula)
         print(f"Wrote '{col_id}' formula to {out_file}")
 
