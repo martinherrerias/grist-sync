@@ -30,6 +30,7 @@ The `git@tag` header is inserted at the beginning of each file, to "version-cont
 """
 
 import re
+import shutil
 import subprocess
 from pathlib import Path
 from warnings import warn
@@ -116,6 +117,7 @@ def main(args):
         warn(f"No files found in {args.basedir} matching filter '{args.column_filter}'")
         return
 
+    shutil.rmtree(Path(args.outdir / OutputName.RENDER.value), ignore_errors=True)
     args.outdir.mkdir(exist_ok=True)
     for src in files:
         tgt = OutputName.RENDER.get(args.outdir, src.name)
