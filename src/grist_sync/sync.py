@@ -83,7 +83,7 @@ def push_formulas(
 ):
     assert outdir.is_dir()
     prefix = OutputName.RENDER.value
-    keys = [f.name.lstrip(prefix).rstrip(".py") for f in outdir.glob(prefix + "*.py")]
+    keys = [f.name[:-3] for f in outdir.glob(prefix + "*.py")]
     if filter and filter != ".*":
         keys = [k for k in keys if re.search(filter, k, flags=re.IGNORECASE)]
 
