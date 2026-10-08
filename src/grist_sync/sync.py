@@ -57,13 +57,14 @@ def _filter_columns(columns, filter=None) -> list[str]:
     return [c for c in col_ids if re.search(filter, c, flags=re.IGNORECASE)]
 
 
-def pull_formulas(api, table_id, outdir, filter=None):
+def pull_formulas(api, table_id, outdir, filter=None, col_ids=None):
 
     columns = api.call(f"tables/{table_id}/columns").json()["columns"]
-    col_ids = _filter_columns(columns, filter)
-    if not col_ids:
-        print(f"No columns found in {table_id} matching filter '{filter}'")
-        return
+    if col_ids is None:
+        col_ids = _filter_columns(columns, filter)
+        if not col_ids:
+            print(f"No columns found in {table_id} matching filter '{filter}'")
+            return
 
     assert outdir.is_dir()
     for col_id in col_ids:
@@ -73,9 +74,13 @@ def pull_formulas(api, table_id, outdir, filter=None):
             print(f"Skipping column '{col_id}': {exc}")
 
         out_file = OutputName.PULL.get(outdir, col_id)
-        formula = grist_to_local(formula)
         out_file.write_text(formula)
-        print(f"Wrote '{col_id}' formula to {out_file}")
+
+        dr_file = OutputName.DERENDERED.get(outdir, col_id)
+        dr_formula = grist_to_local(formula)
+        dr_file.write_text(dr_formula)
+
+        print(f"Wrote '{col_id}' formula to {out_file} and {dr_file}")
 
 
 def push_formulas(
@@ -129,6 +134,8 @@ def push_formulas(
             f"\nFailed to push {len(problems)} of {len(col_map)} formulas: "
             f"{', '.join(problems)}. \nUse --force to override and push anyway"
         )
+
+    pull_formulas(api, table_id, outdir, col_ids=col_map.values())
 
 
 def _file_column_map(outdir: Path, keys: list[str], columns) -> dict[Path, str]:
