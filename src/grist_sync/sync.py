@@ -2,7 +2,6 @@
 Tools to pull, check for server-side changes, and push formulas
 """
 
-import os
 import re
 import subprocess
 from pathlib import Path
@@ -18,10 +17,6 @@ def main(args):
 
     if args.operation == "pull" or not args.dry_run:
         args.outdir.mkdir(parents=True, exist_ok=True)
-
-    if os.path.isfile(args.api_key):
-        with open(args.api_key) as f:
-            args.api_key = f.read().strip()
 
     api = GristDocAPI(args.doc, api_key=args.api_key, server=args.server)
 
@@ -80,7 +75,7 @@ def pull_formulas(api, table_id, outdir, filter=None, col_ids=None):
         dr_formula = grist_to_local(formula)
         dr_file.write_text(dr_formula)
 
-        print(f"Wrote '{col_id}' formula to {out_file} and {dr_file}")
+        print(f"Wrote '{col_id}' formula to {out_file}\n  and rendered to {dr_file}")
 
 
 def push_formulas(

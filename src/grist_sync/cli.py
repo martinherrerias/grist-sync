@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 import dotenv
+from grist_api import GristDocAPI
 
 from . import OutputName, render, sync
 
@@ -65,6 +66,17 @@ def parse_args(args: Iterable[str] | None = None):
     _add_config_cmd(subparsers)
 
     args = parser.parse_args(args)
+
+    if os.path.isfile(args.api_key):
+        with open(args.api_key) as f:
+            args.api_key = f.read().strip()
+
+    api = GristDocAPI(args.doc, api_key=args.api_key, server=args.server)
+    args.doc_name = api.call("").json()["name"]
+
+    args.outdir = Path(
+        str(args.outdir).format(doc=args.doc_name, table=args.table)
+    ).resolve()
 
     return args
 
