@@ -67,6 +67,7 @@ def pull_formulas(api, table_id, outdir, filter=None, col_ids=None):
             formula = get_formula(columns, col_id)
         except ValueError as exc:
             print(f"Skipping column '{col_id}': {exc}")
+            continue
 
         out_file = OutputName.PULL.get(outdir, col_id)
         out_file.write_text(formula)
@@ -209,7 +210,7 @@ def check_for_changes(columns, col_id, outdir: Path, basedir: Path):
             check=True,
             capture_output=True,
         )
-        git_root = out.stdout.decode().strip()
+        git_root = Path(out.stdout.decode().strip())
         prefix = basedir.resolve().relative_to(git_root)
     except (OSError, subprocess.SubprocessError, UnicodeDecodeError, ValueError) as exc:
         raise ValueError(f"Not a git repository? '({basedir})': {exc}")
