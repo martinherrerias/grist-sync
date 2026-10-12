@@ -66,14 +66,14 @@ def parse_args(cli_args: Iterable[str] | None = None):
         with open(args.api_key) as f:
             args.api_key = f.read().strip()
 
-    api = GristDocAPI(args.doc, api_key=args.api_key, server=args.server)
+    api = args.api = GristDocAPI(args.doc, api_key=args.api_key, server=args.server)
     args.doc_name = api.call("").json()["name"]  # type: ignore
 
     table_ids = [t["id"] for t in api.call("tables").json()["tables"]]
-    args.table = _select_tables(table_ids, args.table, False)
+    args.table_id = _select_tables(table_ids, args.table_id, False)
 
     args.outdir = Path(
-        str(args.outdir).format(doc=args.doc_name, table=args.table)
+        str(args.outdir).format(doc=args.doc_name, table=args.table_id)
     ).resolve()
 
     return args
@@ -119,7 +119,7 @@ def _add_pull_cmd(subparsers):
         f"to {OutputName.PULL.value}*.py files",
     )
     _add_cmd_args(cmdparser, False)
-    cmdparser.set_defaults(handler=sync.main, operation="pull")
+    cmdparser.set_defaults(handler=sync.pull_formulas)
 
 
 def _add_push_cmd(subparsers):
@@ -133,7 +133,7 @@ def _add_push_cmd(subparsers):
         ),
     )
     _add_cmd_args(cmdparser, True)
-    cmdparser.set_defaults(handler=sync.main, operation="push")
+    cmdparser.set_defaults(handler=sync.push_formulas)
 
 
 def _add_sync_cmd(subparsers):
@@ -141,7 +141,7 @@ def _add_sync_cmd(subparsers):
         "sync", help="Pull, render, check for server-side changes, and push"
     )
     _add_cmd_args(cmdparser, True)
-    cmdparser.set_defaults(handler=sync.main, operation="sync")
+    cmdparser.set_defaults(handler=sync.sync)
 
 
 def _add_config_cmd(subparsers):
@@ -150,18 +150,18 @@ def _add_config_cmd(subparsers):
     )
     _add_cmd_args(cmdparser, True)
 
-    def print_args(args):
+    def print_args(**args):
         if (
-            args.api_key
-            and args.api_key != ".secrets/.grist-api-key"
-            and not Path(args.api_key).is_file()
+            args["api_key"]
+            and args["api_key"] != ".secrets/.grist-api-key"
+            and not Path(args["api_key"]).is_file()
         ):
-            args.api_key = "*****"
+            args["api_key"] = "*****"
         print(
             "\n".join(
                 f"{k}={v}"
-                for k, v in vars(args).items()
-                if k not in ["handler", "command"]
+                for k, v in args.items()
+                if k not in ["handler", "command", "api"]
             )
         )
 
@@ -173,12 +173,14 @@ def _add_cmd_args(parser: ArgumentParser, edit_args=True):
     parser.add_argument(
         "-t",
         "--table",
+        dest="table_id",
         default=os.getenv("GRIST_SYNC_TABLE_ID", "RUC"),
         help="Grist table ID (can be a regex that matches a single existing table)",
     )
     parser.add_argument(
         "-c",
         "--column-filter",
+        dest="filter",
         default=os.getenv("GRIST_SYNC_COLUMN_FILTER", ".*"),
         help="Regex filter to select columns / SOURCE files "
         "(case-insensitive), e.g. 'foo|bar', (default: %(default)s)",

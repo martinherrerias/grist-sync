@@ -13,35 +13,9 @@ from .render import grist_to_local
 from .render import main as render
 
 
-def main(args):
-
-    if args.operation == "pull" or not args.dry_run:
-        args.outdir.mkdir(parents=True, exist_ok=True)
-
-    api = GristDocAPI(args.doc, api_key=args.api_key, server=args.server)
-
-    if args.operation == "sync":
-        render(args)
-
-    if args.operation == "pull":
-        pull_formulas(
-            api,
-            table_id=args.table,
-            outdir=args.outdir,
-            filter=args.column_filter,
-        )
-    elif args.operation in ["push", "sync"]:
-        push_formulas(
-            api,
-            table_id=args.table,
-            basedir=args.basedir,
-            outdir=args.outdir,
-            filter=args.column_filter,
-            force=args.force,
-            dry_run=args.dry_run,
-        )
-    else:
-        raise ValueError(f"Unknown operation: {args.operation}")
+def sync(**kwargs):
+    render(**kwargs)
+    push_formulas(**kwargs)
 
 
 def _filter_columns(columns, filter=None) -> list[str]:
@@ -52,7 +26,14 @@ def _filter_columns(columns, filter=None) -> list[str]:
     return [c for c in col_ids if re.search(filter, c, flags=re.IGNORECASE)]
 
 
-def pull_formulas(api, table_id, outdir, filter=None, col_ids=None):
+def pull_formulas(
+    api: GristDocAPI,
+    table_id: str,
+    outdir: Path,
+    filter: str | None = None,
+    col_ids=None,
+    **kwargs,
+):
 
     columns = api.call(f"tables/{table_id}/columns").json()["columns"]
     if col_ids is None:
@@ -61,7 +42,7 @@ def pull_formulas(api, table_id, outdir, filter=None, col_ids=None):
             print(f"No columns found in {table_id} matching filter '{filter}'")
             return
 
-    assert outdir.is_dir()
+    outdir.mkdir(parents=True, exist_ok=True)
     for col_id in col_ids:
         try:
             formula = get_formula(columns, col_id)
@@ -80,7 +61,7 @@ def pull_formulas(api, table_id, outdir, filter=None, col_ids=None):
 
 
 def push_formulas(
-    api, table_id, basedir, outdir, filter=None, force=False, dry_run=False
+    api, table_id, basedir, outdir, filter=None, force=False, dry_run=False, **kwargs
 ):
     assert outdir.is_dir()
     prefix = OutputName.RENDER.value

@@ -69,9 +69,7 @@ def _uncomment_chunks(lines, tag):
     lines = re.sub(
         rf"(# ?<{tag}>\s*\n)(.*?)(# ?</{tag}>)",
         lambda m: (
-            m.group(1)
-            + re.sub(r"^# ?", "", m.group(2), flags=re.MULTILINE)
-            + m.group(3)
+            m.group(1) + re.sub(r"^# ?", "", m.group(2), flags=re.MULTILINE) + m.group(3)
         ),
         lines,
         flags=re.DOTALL,
@@ -110,27 +108,27 @@ def _parse_files(basedir: Path, filter: str | None = None) -> list[Path]:
     return paths
 
 
-def main(args):
+def main(basedir: Path, outdir: Path, filter: str | None = None, **kwargs) -> None:
 
-    files = _parse_files(args.basedir, args.column_filter)
+    files = _parse_files(basedir, filter)
     if not files:
-        warn(f"No files found in {args.basedir} matching filter '{args.column_filter}'")
+        warn(f"No files found in {basedir} matching filter '{filter}'")
         return
 
-    shutil.rmtree(Path(args.outdir / OutputName.RENDER.value), ignore_errors=True)
-    args.outdir.mkdir(exist_ok=True)
+    shutil.rmtree(Path(outdir / OutputName.RENDER.value), ignore_errors=True)
+    outdir.mkdir(exist_ok=True)
     for src in files:
-        tgt = OutputName.RENDER.get(args.outdir, src.name)
+        tgt = OutputName.RENDER.get(outdir, src.name)
         print(f"Rendering {src} -> {tgt}")
 
         local_text = src.read_text()
-        grist_text = local_to_grist(local_text, args.basedir)
+        grist_text = local_to_grist(local_text, basedir)
         tgt.write_text(grist_text)
 
         # verify that code can be converted back without changes
         roundtrip_text = grist_to_local(grist_text)
         if roundtrip_text != local_text:
-            temp = OutputName.ROUND.get(args.outdir, src.name)
+            temp = OutputName.ROUND.get(outdir, src.name)
             temp.write_text(roundtrip_text)
             cmd = ["diff", str(src), str(temp)]
             diff = subprocess.run(cmd, capture_output=True, text=True, check=False)
