@@ -10,7 +10,7 @@ from pathlib import Path
 import dotenv
 from grist_api import GristDocAPI
 
-from . import OutputName, render, sync
+from . import OutputName, compare, render, sync
 
 
 def parse_args(cli_args: Iterable[str] = ["config"]):
@@ -59,6 +59,7 @@ def parse_args(cli_args: Iterable[str] = ["config"]):
     _add_pull_cmd(subparsers)
     _add_push_cmd(subparsers)
     _add_sync_cmd(subparsers)
+    _add_compare_cmd(subparsers)
     _add_config_cmd(subparsers)
 
     args = parser.parse_args(cli_args)
@@ -74,6 +75,10 @@ def parse_args(cli_args: Iterable[str] = ["config"]):
     args.table_id = _select_tables(table_ids, args.table_id, False)
 
     args.outdir = Path(str(args.outdir).format(doc=args.doc_name, table=args.table_id))
+
+    if args.command == "compare":
+        args.other_tables = _select_tables(table_ids, args.other_tables, multiple=True)
+        args.output = Path(args.output or str(args.outdir) + "_compare.csv")
 
     return args
 
@@ -141,6 +146,28 @@ def _add_sync_cmd(subparsers):
     )
     _add_cmd_args(cmdparser, True)
     cmdparser.set_defaults(handler=sync.sync)
+
+
+def _add_compare_cmd(subparsers):
+    cmdparser = subparsers.add_parser(
+        "compare",
+        help="Compare columns of two or more tables",
+        description="Compare TABLE against OTHER_TABLES",
+    )
+    _add_cmd_args(cmdparser, False)
+
+    cmdparser.add_argument(
+        "-T",
+        "--other-tables",
+        help="Regex matching tables to compare",
+    )
+    cmdparser.add_argument(
+        "-O",
+        "--output",
+        type=Path,
+        help="Output CSV file (default: OUTDIR_compare.csv).",
+    )
+    cmdparser.set_defaults(handler=compare.main)
 
 
 def _add_config_cmd(subparsers):
