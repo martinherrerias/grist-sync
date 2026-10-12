@@ -34,6 +34,14 @@ def column_formulas(columns, filter=None) -> dict[ColID, Formula]:
     }
 
 
+def column_labels(columns, filter=None) -> dict[ColID, str]:
+    """Map column ID -> label, for columns matching FILTER."""
+    wanted = set(_filter_columns(columns, filter))
+    return {
+        c["id"]: c["fields"].get("label") or "" for c in columns if c["id"] in wanted
+    }
+
+
 def classify(
     template: dict[ColID, Formula], other: dict[ColID, Formula], col_id: ColID
 ) -> ColumnMatch:
@@ -48,13 +56,22 @@ def classify(
     return ColumnMatch.FORMULA_MISMATCH
 
 
-def build_rows(columns: dict[TableID, dict[ColID, Formula]], template_id: TableID):
+def build_rows(
+    columns: dict[TableID, dict[ColID, Formula]],
+    template_id: TableID,
+    labels: dict[TableID, dict[ColID, str]] | None = None,
+):
+    """Yield [col_id, *match symbols per table, (labels used across tables)]."""
     template = columns[template_id]
     col_ids = sorted({c for t in columns.values() for c in t})
     for col_id in col_ids:
-        yield [col_id] + [
+        row = [col_id] + [
             classify(template, cols, col_id).value for cols in columns.values()
         ]
+        if labels is not None:
+            used = {t[col_id] for t in labels.values() if t.get(col_id)}
+            row.append(" | ".join(sorted(used)))
+        yield row
 
 
 def main(
@@ -71,18 +88,19 @@ def main(
         raise ValueError(f"No other tables selected for comparison with {template_id}")
     picks = [template_id] + sorted(others)
 
+    raw = {t: api.call(f"tables/{t}/columns").json()["columns"] for t in picks}
     columns: dict[TableID, dict[ColID, Formula]] = {
-        t: column_formulas(api.call(f"tables/{t}/columns").json()["columns"], filter)
-        for t in picks
+        t: column_formulas(cols, filter) for t, cols in raw.items()
     }
+    labels = {t: column_labels(cols, filter) for t, cols in raw.items()}
 
     output = Path(str(output).format(table=template_id))
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpfile = Path(tmpdir) / output.name
         with open(tmpfile, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["COL_ID"] + picks)
-            writer.writerows(build_rows(columns, template_id))
+            writer.writerow(["COL_ID"] + picks + ["LABELS"])
+            writer.writerows(build_rows(columns, template_id, labels))
         output.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(tmpfile, output)
     print(f"Compared {len(picks)} tables to {template_id}: {output}")
