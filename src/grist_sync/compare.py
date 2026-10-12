@@ -17,8 +17,8 @@ type Formula = str | None
 
 class ColumnMatch(Enum):
     DATA = "D"  # do not check contents
-    FORMULA_MATCH = "✓"
-    FORMULA_MISMATCH = "✗"
+    FORMULA_MATCH = "√"
+    FORMULA_MISMATCH = "X"
     MISSING = "-"
 
 
@@ -99,7 +99,7 @@ def main(
         tmpfile = Path(tmpdir) / output.name
         with open(tmpfile, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["COL_ID"] + picks + ["LABELS"])
+            writer.writerow(["col_id"] + picks + ["labels"])
             writer.writerows(build_rows(columns, template_id, labels))
         output.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(tmpfile, output)

@@ -25,7 +25,7 @@ def test_classify_and_rows():
     assert classify(tmpl, other, "D") is ColumnMatch.DATA
     assert classify(tmpl, {}, "A") is ColumnMatch.MISSING
     rows = list(build_rows({"T": tmpl, "O": other}, "T"))
-    assert rows[0] == ["A", "✓", "✓"]
+    assert rows[0] == ["A", "√", "√"]
     assert rows[3] == ["D", "-", "D"]
 
 
@@ -33,4 +33,4 @@ def test_labels_column():
     labels = {"T": {"A": "Alpha"}, "O": {"A": "Beta", "B": "Bee"}}
     cols = {"T": {"A": "1"}, "O": {"A": "1", "B": None}}
     rows = list(build_rows(cols, "T", labels))
-    assert rows == [["A", "✓", "✓", "Alpha | Beta"], ["B", "-", "D", "Bee"]]
+    assert rows == [["A", "√", "√", "Alpha | Beta"], ["B", "-", "D", "Bee"]]
