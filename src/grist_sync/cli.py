@@ -73,9 +73,7 @@ def parse_args(cli_args: Iterable[str] = ["config"]):
     table_ids = [t["id"] for t in api.call("tables").json()["tables"]]
     args.table_id = _select_tables(table_ids, args.table_id, False)
 
-    args.outdir = Path(
-        str(args.outdir).format(doc=args.doc_name, table=args.table_id)
-    ).resolve()
+    args.outdir = Path(str(args.outdir).format(doc=args.doc_name, table=args.table_id))
 
     return args
 

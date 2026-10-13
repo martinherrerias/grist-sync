@@ -57,7 +57,7 @@ def pull_formulas(
         dr_formula = grist_to_local(formula)
         dr_file.write_text(dr_formula)
 
-        print(f"Wrote '{col_id}' formula to {out_file}\n  and rendered to {dr_file}")
+        print(f"Fetched '{col_id}' formula to {out_file}\n  and rendered to {dr_file}")
 
 
 def push_formulas(
