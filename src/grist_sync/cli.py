@@ -2,6 +2,7 @@
 
 import os
 import re
+import sys
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from collections.abc import Iterable
 from pathlib import Path
@@ -12,7 +13,7 @@ from grist_api import GristDocAPI
 from . import OutputName, render, sync
 
 
-def parse_args(cli_args: Iterable[str] | None = None):
+def parse_args(cli_args: Iterable[str] = ["config"]):
 
     dotenv.load_dotenv(Path.cwd() / ".env")
 
@@ -203,8 +204,8 @@ def _add_cmd_args(parser: ArgumentParser, edit_args=True):
 
 
 def main():
-    args = parse_args()
-    args.handler(args)
+    args = parse_args(sys.argv[1:])
+    args.handler(**vars(args))
 
 
 if __name__ == "__main__":
