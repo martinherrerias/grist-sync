@@ -78,7 +78,12 @@ def parse_args(cli_args: Iterable[str] = ["config"]):
 
     if args.command == "map":
         args.other_tables = _select_tables(table_ids, args.other_tables, multiple=True)
-        args.output = Path(args.output or str(args.outdir) + "_compare.csv")
+        if args.output:
+            args.output = Path(
+                args.output.format(
+                    doc=args.doc_name, table=args.table_id, outdir=str(args.outdir)
+                )
+            )
 
     return args
 
@@ -164,8 +169,12 @@ def _add_map_cmd(subparsers):
     cmdparser.add_argument(
         "-O",
         "--output",
-        type=Path,
-        help="Output CSV file (default: OUTDIR_compare.csv).",
+        default="",
+        type=str,
+        help=(
+            "Optional output CSV file (e.g. '{outdir}_compare.csv'). "
+            "If empty (default), results will be printed to stdout."
+        ),
     )
     cmdparser.set_defaults(handler=map.main)
 

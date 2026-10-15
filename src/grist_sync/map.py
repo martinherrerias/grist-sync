@@ -115,7 +115,7 @@ def main(
     api: GristDocAPI,
     table_id: TableID,
     other_tables: list[TableID],
-    output: Path,
+    output: Path | None,
     filter: str | None = None,
     dry_run: bool = False,
     force: bool = False,
@@ -145,13 +145,17 @@ def main(
                 columns[t][col_id] = new
                 print(f"Updated {t}.{col_id}" + (" (forced)" if current.strip() else ""))
 
-    output = Path(str(output).format(table=template_id))
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmpfile = Path(tmpdir) / output.name
+        tmpfile = Path(tmpdir) / "grist-sync-map.csv"
         with open(tmpfile, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["col_id"] + picks + ["labels"])
             writer.writerows(build_rows(columns, template_id, labels))
-        output.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(tmpfile, output)
-    print(f"Compared {len(others)} tables to {template_id}: {output}")
+
+        if output:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(tmpfile, output)
+            print(f"Compared {len(others)} tables to {template_id}: {output}")
+        else:
+            with open(tmpfile) as f:
+                print(f.read())
