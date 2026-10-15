@@ -45,7 +45,7 @@ def test_parse_args_uses_grist_sync_environment(monkeypatch):
     assert args.api_key == settings["GRIST_SYNC_API_KEY"]
     assert args.doc == settings["GRIST_SYNC_DOC_ID"]
     assert args.table_id == "Formulas"
-    assert args.outdir == Path("build/grist/Spoof/Formulas").resolve()
+    assert args.outdir == Path("build/grist/Spoof/Formulas")
     assert args.doc_name == "Spoof"
     assert args.basedir == Path(settings["GRIST_SYNC_SOURCE"])
     assert args.filter == settings["GRIST_SYNC_COLUMN_FILTER"]
