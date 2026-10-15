@@ -9,7 +9,7 @@ from pathlib import Path
 
 from grist_api import GristDocAPI
 
-from .sync import _filter_columns
+from .sync import _filter_columns, set_formula
 
 type TableID = str
 type ColID = str
@@ -67,6 +67,32 @@ def classify(
     return ColumnMatch.FORMULA_MISMATCH
 
 
+def comment_out(formula: str) -> str:
+    return "\n".join(f"# {line}".rstrip() for line in formula.splitlines())
+
+
+def plan_update(reference: Formula, current: Formula, force: bool = False) -> Formula:
+    """
+    Return the new formula for a target column, or None if it must be left alone.
+
+    Data columns (current is None) are never modified, matching formulas are
+    skipped, and non-empty targets are only replaced with FORCE, keeping the
+    old formula as a comment above the new one.
+    """
+    if current is None or reference is None:
+        return None
+    new = normalize_formula(reference)
+    old = normalize_formula(current)
+    if not new or new == old:
+        return None
+    if old and not force:
+        return None
+    body = current.rstrip()
+    header = body[: len(body) - len(old)]
+    kept = header + comment_out(old) if old else body
+    return f"{kept}\n{reference.strip()}" if kept else reference.strip()
+
+
 def build_rows(
     columns: dict[TableID, dict[ColID, Formula]],
     template_id: TableID,
@@ -91,12 +117,10 @@ def main(
     other_tables: list[TableID],
     output: Path,
     filter: str | None = None,
-    dry_run: bool = True,
+    dry_run: bool = False,
+    force: bool = False,
     **kwargs,
 ) -> None:
-
-    if not dry_run:
-        raise NotImplementedError("`map` without --dry-run (-n) is not implemented yet")
 
     template_id = table_id
     others = set(other_tables) - {template_id}
@@ -110,6 +134,17 @@ def main(
     }
     labels = {t: column_labels(cols, filter) for t, cols in raw.items()}
 
+    if not dry_run:
+        template = columns[template_id]
+        for t in sorted(others):
+            for col_id, current in columns[t].items():
+                new = plan_update(template.get(col_id), current, force)
+                if new is None:
+                    continue
+                set_formula(api, t, col_id, new)
+                columns[t][col_id] = new
+                print(f"Updated {t}.{col_id}" + (" (forced)" if current.strip() else ""))
+
     output = Path(str(output).format(table=template_id))
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpfile = Path(tmpdir) / output.name
@@ -119,4 +154,4 @@ def main(
             writer.writerows(build_rows(columns, template_id, labels))
         output.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(tmpfile, output)
-    print(f"Compared {len(picks)} tables to {template_id}: {output}")
+    print(f"Compared {len(others)} tables to {template_id}: {output}")

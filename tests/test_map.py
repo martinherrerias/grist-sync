@@ -3,6 +3,7 @@ from grist_sync.map import (
     build_rows,
     classify,
     column_formulas,
+    plan_update,
 )
 
 
@@ -41,3 +42,14 @@ def test_labels_column():
     cols = {"T": {"A": "1"}, "O": {"A": "1", "B": None}}
     rows = list(build_rows(cols, "T", labels))
     assert rows == [["A", "√", "√", "Alpha | Beta"], ["B", "-", "D", "Bee"]]
+
+
+def test_plan_update_is_safe():
+    assert plan_update("1", None, force=True) is None  # data column
+    assert plan_update("1", "# c\n1") is None  # already matches
+    assert plan_update("1", "") == "1"  # empty target
+    assert plan_update("1", "2") is None  # needs --force
+    assert plan_update("1", "2\n\n3", force=True) == "# 2\n#\n# 3\n1"
+    assert plan_update("", "2", force=True) is None
+    assert plan_update("1", "# x = 1\n\nx = 1\n", force=True) == "# x = 1\n\n# x = 1\n1"
+    assert plan_update("1", "# hdr\n", force=True) == "# hdr\n1"
