@@ -1,4 +1,4 @@
-from grist_sync.compare import (
+from grist_sync.map import (
     ColumnMatch,
     build_rows,
     classify,

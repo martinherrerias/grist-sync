@@ -80,8 +80,13 @@ def main(
     other_tables: list[TableID],
     output: Path,
     filter: str | None = None,
+    dry_run: bool = True,
     **kwargs,
 ) -> None:
+
+    if not dry_run:
+        raise NotImplementedError("`map` without --dry-run (-n) is not implemented yet")
+
     template_id = table_id
     others = set(other_tables) - {template_id}
     if not others:
