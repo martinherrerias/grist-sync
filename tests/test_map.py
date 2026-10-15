@@ -29,6 +29,13 @@ def test_classify_and_rows():
     assert rows[3] == ["D", "-", "D"]
 
 
+def test_classify_ignores_comment_header():
+    tmpl: dict[str, str | None] = {"A": "1", "B": ""}
+    other: dict[str, str | None] = {"A": "# comment\n1", "B": "# comment"}
+    assert classify(tmpl, other, "A") is ColumnMatch.FORMULA_MATCH
+    assert classify(tmpl, other, "B") is ColumnMatch.FORMULA_MATCH
+
+
 def test_labels_column():
     labels = {"T": {"A": "Alpha"}, "O": {"A": "Beta", "B": "Bee"}}
     cols = {"T": {"A": "1"}, "O": {"A": "1", "B": None}}

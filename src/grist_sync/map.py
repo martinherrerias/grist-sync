@@ -1,6 +1,7 @@
 """Compare columns of several tables against a template table."""
 
 import csv
+import re
 import shutil
 import tempfile
 from enum import Enum
@@ -42,6 +43,14 @@ def column_labels(columns, filter=None) -> dict[ColID, str]:
     }
 
 
+_COMMENT_HEADER_RE = re.compile(r"\A(?:\s*(?:#[^\n]*)?)*")
+
+
+def normalize_formula(formula: str) -> str:
+    """Strip leading comment/blank lines and surrounding whitespace."""
+    return _COMMENT_HEADER_RE.sub("", formula).strip()
+
+
 def classify(
     template: dict[ColID, Formula], other: dict[ColID, Formula], col_id: ColID
 ) -> ColumnMatch:
@@ -51,7 +60,9 @@ def classify(
     if formula is None:
         return ColumnMatch.DATA
     reference = template.get(col_id)
-    if reference is not None and reference.strip() == formula.strip():
+    if reference is not None and normalize_formula(reference) == normalize_formula(
+        formula
+    ):
         return ColumnMatch.FORMULA_MATCH
     return ColumnMatch.FORMULA_MISMATCH
 
