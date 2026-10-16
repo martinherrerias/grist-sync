@@ -18,12 +18,13 @@ def sync(**kwargs):
     push_formulas(**kwargs)
 
 
-def _filter_columns(columns, filter=None) -> list[str]:
+def _filter_names(names, filter=None, anti_filter=None) -> list[str]:
 
-    col_ids = [c["id"] for c in columns]
-    if not filter or filter == ".*":
-        return col_ids
-    return [c for c in col_ids if re.search(filter, c, flags=re.IGNORECASE)]
+    if filter and filter != ".*":
+        names = [c for c in names if re.search(filter, c, flags=re.IGNORECASE)]
+    if anti_filter:
+        names = [c for c in names if not re.search(anti_filter, c, flags=re.IGNORECASE)]
+    return names
 
 
 def pull_formulas(
@@ -31,16 +32,17 @@ def pull_formulas(
     table_id: str,
     outdir: Path,
     filter: str | None = None,
+    anti_filter: str | None = None,
     col_ids=None,
     **kwargs,
 ):
 
     columns = api.call(f"tables/{table_id}/columns").json()["columns"]
     if col_ids is None:
-        col_ids = _filter_columns(columns, filter)
-        if not col_ids:
-            print(f"No columns found in {table_id} matching filter '{filter}'")
-            return
+        col_ids = _filter_names([c["id"] for c in columns], filter, anti_filter)
+    if not col_ids:
+        print(f"No columns found in {table_id} matching filter '{filter}'")
+        return
 
     outdir.mkdir(parents=True, exist_ok=True)
     for col_id in col_ids:
@@ -61,7 +63,15 @@ def pull_formulas(
 
 
 def push_formulas(
-    api, table_id, basedir, outdir, filter=None, force=False, dry_run=False, **kwargs
+    api: GristDocAPI,
+    table_id: str,
+    basedir: Path,
+    outdir: Path,
+    filter: str | None = None,
+    anti_filter: str | None = None,
+    force: bool = False,
+    dry_run: bool = False,
+    **kwargs,
 ):
     assert outdir.is_dir()
     prefix = OutputName.RENDER.value

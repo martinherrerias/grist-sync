@@ -13,8 +13,8 @@ def col(id, formula=None):
 
 def test_column_formulas_keeps_data_columns_and_applies_filter():
     cols = [col("A", "1"), col("B"), col("C", "3")]
-    assert column_formulas(cols) == {"A": "1", "B": None, "C": "3"}
-    assert column_formulas(cols, "^a") == {"A": "1"}
+    assert column_formulas(cols, {"A", "B", "C"}) == {"A": "1", "B": None, "C": "3"}
+    assert column_formulas(cols, {"A"}) == {"A": "1"}
 
 
 def test_classify_and_rows():

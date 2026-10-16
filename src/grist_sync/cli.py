@@ -220,6 +220,13 @@ def _add_cmd_args(parser: ArgumentParser, edit_args=True):
         help="Regex filter to select columns / SOURCE files "
         "(case-insensitive), e.g. 'foo|bar', (default: %(default)s)",
     )
+    parser.add_argument(
+        "-C",
+        "--column-skip",
+        dest="anti_filter",
+        default=os.getenv("GRIST_SYNC_COLUMN_SKIP", ""),
+        help="Regex filter to skip columns / SOURCE files",
+    )
     if not edit_args:
         return
 

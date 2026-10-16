@@ -9,7 +9,7 @@ from pathlib import Path
 
 from grist_api import GristDocAPI
 
-from .sync import _filter_columns, set_formula
+from .sync import _filter_names, set_formula
 
 type TableID = str
 type ColID = str
@@ -23,9 +23,8 @@ class ColumnMatch(Enum):
     MISSING = "-"
 
 
-def column_formulas(columns, filter=None) -> dict[ColID, Formula]:
-    """Map column ID -> formula (None for data columns), for columns matching FILTER."""
-    wanted = set(_filter_columns(columns, filter))
+def column_formulas(columns, wanted: set[str]) -> dict[ColID, Formula]:
+    """Map column ID -> formula (None for data columns), for columns in WANTED."""
     return {
         c["id"]: (c["fields"].get("formula") or "")
         if c["fields"].get("isFormula")
@@ -35,9 +34,8 @@ def column_formulas(columns, filter=None) -> dict[ColID, Formula]:
     }
 
 
-def column_labels(columns, filter=None) -> dict[ColID, str]:
-    """Map column ID -> label, for columns matching FILTER."""
-    wanted = set(_filter_columns(columns, filter))
+def column_labels(columns, wanted: set[str]) -> dict[ColID, str]:
+    """Map column ID -> label, for columns in WANTED."""
     return {
         c["id"]: c["fields"].get("label") or "" for c in columns if c["id"] in wanted
     }
@@ -117,6 +115,7 @@ def main(
     other_tables: list[TableID],
     output: Path | None,
     filter: str | None = None,
+    anti_filter: str | None = None,
     dry_run: bool = False,
     force: bool = False,
     **kwargs,
@@ -129,10 +128,13 @@ def main(
     picks = [template_id] + sorted(others)
 
     raw = {t: api.call(f"tables/{t}/columns").json()["columns"] for t in picks}
+    col_ids = {c["id"] for cols in raw.values() for c in cols}
+    col_ids = set(_filter_names(col_ids, filter, anti_filter))
+
     columns: dict[TableID, dict[ColID, Formula]] = {
-        t: column_formulas(cols, filter) for t, cols in raw.items()
+        t: column_formulas(cols, col_ids) for t, cols in raw.items()
     }
-    labels = {t: column_labels(cols, filter) for t, cols in raw.items()}
+    labels = {t: column_labels(cols, col_ids) for t, cols in raw.items()}
 
     if not dry_run:
         template = columns[template_id]
