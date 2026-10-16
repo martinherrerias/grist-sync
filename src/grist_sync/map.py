@@ -46,6 +46,8 @@ _COMMENT_HEADER_RE = re.compile(r"\A(?:\s*(?:#[^\n]*)?)*")
 
 def normalize_formula(formula: str) -> str:
     """Strip leading comment/blank lines and surrounding whitespace."""
+    formula = formula.replace("\r\n", "\n").replace("\r", "\n").replace("\t", "  ")
+    formula = re.sub(r" +$", "", formula, flags=re.MULTILINE)
     return _COMMENT_HEADER_RE.sub("", formula).strip()
 
 

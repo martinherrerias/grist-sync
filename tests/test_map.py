@@ -3,6 +3,7 @@ from grist_sync.map import (
     build_rows,
     classify,
     column_formulas,
+    normalize_formula,
     plan_update,
 )
 
@@ -35,6 +36,20 @@ def test_classify_ignores_comment_header():
     other: dict[str, str | None] = {"A": "# comment\n1", "B": "# comment"}
     assert classify(tmpl, other, "A") is ColumnMatch.FORMULA_MATCH
     assert classify(tmpl, other, "B") is ColumnMatch.FORMULA_MATCH
+
+
+def test_normalize_formula_ignores_line_ending_differences():
+    crlf_formula = (
+        'PREVIOUS(\r\n'
+        '  rec, group_by="Subprograma", order_by="Identificador"\r\n'
+        ')'
+    )
+    lf_formula = (
+        'PREVIOUS(\n'
+        '  rec, group_by="Subprograma", order_by="Identificador"\n'
+        ')'
+    )
+    assert normalize_formula(crlf_formula) == normalize_formula(lf_formula)
 
 
 def test_labels_column():
