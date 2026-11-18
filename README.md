@@ -21,6 +21,8 @@ gr --help
 
 Edit `.env` with the Grist server URL, document ID, and API key, etc. The template should be self documenting.
 
+Command-line options > environment variables > `.env` values > files in `.secrets`.
+
 Use `gr config` to check if your settings are being picked up as intended.
 See `gr --help` for further information, and available commands.
 

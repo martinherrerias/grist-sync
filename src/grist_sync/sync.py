@@ -70,7 +70,7 @@ def push_formulas(
     filter: str | None = None,
     anti_filter: str | None = None,
     force: bool = False,
-    dry_run: bool = False,
+    dryrun: bool = False,
     **kwargs,
 ):
     assert outdir.is_dir()
@@ -105,7 +105,7 @@ def push_formulas(
             else:
                 status = f"ignoring ERROR: {exc}"
 
-        if dry_run:
+        if dryrun:
             print(f"Dry-run: would push formula for '{col_id}' {status}")
             continue
 

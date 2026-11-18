@@ -118,7 +118,7 @@ def main(
     output: Path | None,
     filter: str | None = None,
     anti_filter: str | None = None,
-    dry_run: bool = False,
+    dryrun: bool = False,
     force: bool = False,
     **kwargs,
 ) -> None:
@@ -138,7 +138,7 @@ def main(
     }
     labels = {t: column_labels(cols, col_ids) for t, cols in raw.items()}
 
-    if not dry_run:
+    if not dryrun:
         template = columns[template_id]
         for t in sorted(others):
             for col_id, current in columns[t].items():
