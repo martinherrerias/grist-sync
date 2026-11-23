@@ -1,4 +1,6 @@
-"""Compare columns of several tables against a template table."""
+"""
+Compare/copy formulas from one table to others. See `gr map -h`
+"""
 
 import csv
 import re

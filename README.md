@@ -75,6 +75,8 @@ def my_function(record: Record, table: UserTable) -> str:
 
 `gr sync` runs the render and push steps. Use `gr sync --force` to push despite detected conflicts.
 
+`gr map -t TEMPLATE -T TARGETS` copies columns from a `TEMPLATE` table to others. By default, only empty columns in the target tables are filled; use `-f` to overwrite existing formulas (previous contents commented out), `-n` to compare formulas only.
+
 
 ## Notes
 

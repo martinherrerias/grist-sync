@@ -120,10 +120,19 @@ def _add_sync_cmd(subparsers):
 def _add_map_cmd(subparsers):
     cmdparser = subparsers.add_parser(
         "map",
-        help="Map columns to other tables (-n: compare only)",
-        description="Map TABLE columns to OTHER_TABLES (-n: compare only)",
+        help="Copy/compare formulas to other tables",
+        description="Copy/compare TABLE_ID formulas to OTHER_TABLES",
     )
     _add_cmd_args(cmdparser, True)
+
+    for action in cmdparser._actions:
+        if action.dest == "dryrun":
+            action.help = "Compare columns only"
+        elif action.dest == "force":
+            action.help = (
+                "Overwrite formulas (commenting existing contents), "
+                "otherwise only empty columns are filled"
+            )
 
     cmdparser.add_argument(
         "-T",
