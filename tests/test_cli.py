@@ -1,5 +1,6 @@
 import os
 from glob import glob
+from http import HTTPStatus
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -28,9 +29,7 @@ def setup_cli(monkeypatch, tmp_path):
             if endpoint == "":
                 response = {"name": "Spoof"}
             elif endpoint == "tables":
-                response = {
-                    "tables": [{"id": "Formulas"}, {"id": "Another_Table"}]
-                }
+                response = {"tables": [{"id": "Formulas"}, {"id": "Another_Table"}]}
             elif endpoint == "tables/Formulas/columns":
                 response = {
                     "columns": [
@@ -51,7 +50,7 @@ def setup_cli(monkeypatch, tmp_path):
                 }
             else:
                 raise ValueError(f"Unexpected endpoint: {endpoint}")
-            return MagicMock(json=lambda: response)
+            return MagicMock(status_code=HTTPStatus.OK, json=lambda: response)
 
         api.call.side_effect = call
         return api

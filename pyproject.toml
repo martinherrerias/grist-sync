@@ -22,5 +22,8 @@ dev = [
 [tool.ruff.lint]
 extend-select = ["E501"]
 
+[tool.ruff]
+extend-exclude = ["*.md"]   
+
 [tool.uv]
 package = true

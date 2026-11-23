@@ -16,29 +16,25 @@ def parse_args(cli_args: Iterable[str] = ["config"]):
 
     dotenv.load_dotenv(Path.cwd() / ".env")
 
-    parser = ArgumentParser(prog="gr")
+    parser = ArgumentParser(prog="gr", argument_default=SUPPRESS)
     parser.add_argument(
         "--server",
-        default=SUPPRESS,
         help="Grist server URL",
     )
     parser.add_argument(
         "--api-key",
-        default=SUPPRESS,
         help="Grist API key or secret file path",
     )
     parser.add_argument(
         "-d",
         "--doc",
         dest="doc_id",
-        default=SUPPRESS,
         help="Grist document ID",
     )
     parser.add_argument(
         "-o",
         "--outdir",
         type=Path,
-        default=SUPPRESS,
         help="Output directory (default: .grist/{doc}/{table})",
     )
     parser.add_argument(
@@ -47,7 +43,6 @@ def parse_args(cli_args: Iterable[str] = ["config"]):
         dest="source",
         type=Path,
         metavar="SOURCE",
-        default=SUPPRESS,
         help="Source directory for render (default: formulas)",
     )
 
@@ -138,7 +133,6 @@ def _add_map_cmd(subparsers):
     cmdparser.add_argument(
         "-O",
         "--output",
-        default="",
         type=str,
         help=(
             "Optional output CSV file (e.g. '{outdir}_compare.csv'). "

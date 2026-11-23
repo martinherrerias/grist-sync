@@ -1,10 +1,12 @@
 import re
+from http import HTTPStatus
 from pathlib import Path
 from typing import Literal, Self, overload
 
 from grist_api import GristDocAPI
 from pydantic import Field, PrivateAttr, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from requests.exceptions import HTTPError
 
 
 class _SettingsMeta[Cls](type(BaseSettings)):
@@ -52,15 +54,8 @@ class Settings(BaseSettings, metaclass=_SettingsMeta["Settings"]):
             dryrun=self.dryrun,
             verify_ssl=self.verify_ssl,
         )
-        document = self._api.call("")
-        if document is None:
-            raise RuntimeError("Grist did not return a document response")
-        self._doc_name = document.json()["name"]
-
-        tables = self._api.call("tables")
-        if tables is None:
-            raise RuntimeError("Grist did not return a tables response")
-        table_ids = [t["id"] for t in tables.json()["tables"]]
+        self._doc_name = _api_safe_get(self._api, "", "name")
+        table_ids = [t["id"] for t in _api_safe_get(self._api, "tables")]
         self.table_id = _select_tables(table_ids, self.table_id, False)
 
         self.outdir = Path(
@@ -87,6 +82,22 @@ class Settings(BaseSettings, metaclass=_SettingsMeta["Settings"]):
     @property
     def doc_name(self) -> str:
         return self._doc_name
+
+
+def _api_safe_get(api, endpoint, what=None):
+    """
+    `api.call(endpoint).json()[what]` without type warnings.
+    `what` defaults to the last part of the endpoint.
+    """
+    response = api.call(endpoint)
+    if response is None:
+        raise HTTPError("Grist returned no response")
+    if response.status_code != HTTPStatus.OK:
+        raise HTTPError(f"Grist returned HTTP {response.status_code}")
+
+    if what is None:
+        what = endpoint.split("/")[-1]
+    return response.json()[what]
 
 
 @overload

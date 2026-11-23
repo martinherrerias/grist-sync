@@ -9,6 +9,7 @@ from pathlib import Path
 from grist_api import GristDocAPI
 
 from . import OutputName
+from .config import _api_safe_get
 from .render import grist_to_local
 from .render import main as render
 
@@ -37,7 +38,7 @@ def pull_formulas(
     **kwargs,
 ):
 
-    columns = api.call(f"tables/{table_id}/columns").json()["columns"]
+    columns = _api_safe_get(api, f"tables/{table_id}/columns")
     if col_ids is None:
         col_ids = _filter_names([c["id"] for c in columns], filter, anti_filter)
     if not col_ids:
@@ -83,7 +84,7 @@ def push_formulas(
         print(f"No renderd files found in {outdir} matching filter '{filter}'")
         return
 
-    columns = api.call(f"tables/{table_id}/columns").json()["columns"]
+    columns = _api_safe_get(api, f"tables/{table_id}/columns")
     col_map = _file_column_map(outdir, keys, columns)
 
     problems = []

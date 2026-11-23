@@ -40,15 +40,9 @@ def test_classify_ignores_comment_header():
 
 def test_normalize_formula_ignores_line_ending_differences():
     crlf_formula = (
-        'PREVIOUS(\r\n'
-        '  rec, group_by="Subprograma", order_by="Identificador"\r\n'
-        ')'
+        'PREVIOUS(\r\n  rec, group_by="Subprograma", order_by="Identificador"\r\n)'
     )
-    lf_formula = (
-        'PREVIOUS(\n'
-        '  rec, group_by="Subprograma", order_by="Identificador"\n'
-        ')'
-    )
+    lf_formula = 'PREVIOUS(\n  rec, group_by="Subprograma", order_by="Identificador"\n)'
     assert normalize_formula(crlf_formula) == normalize_formula(lf_formula)
 
 

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from grist_api import GristDocAPI
 
+from .config import _api_safe_get
 from .sync import _filter_names, set_formula
 
 type TableID = str
@@ -129,7 +130,7 @@ def main(
         raise ValueError(f"No other tables selected for comparison with {template_id}")
     picks = [template_id] + sorted(others)
 
-    raw = {t: api.call(f"tables/{t}/columns").json()["columns"] for t in picks}
+    raw = {t: _api_safe_get(api, f"tables/{t}/columns") for t in picks}
     col_ids = {c["id"] for cols in raw.values() for c in cols}
     col_ids = set(_filter_names(col_ids, filter, anti_filter))
 
@@ -147,7 +148,10 @@ def main(
                     continue
                 set_formula(api, t, col_id, new)
                 columns[t][col_id] = new
-                print(f"Updated {t}.{col_id}" + (" (forced)" if current.strip() else ""))
+                print(
+                    f"Updated {t}.{col_id}"
+                    + (" (forced)" if current and current.strip() else "")
+                )
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpfile = Path(tmpdir) / "grist-sync-map.csv"
