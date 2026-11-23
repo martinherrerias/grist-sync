@@ -69,7 +69,9 @@ def _uncomment_chunks(lines, tag):
     lines = re.sub(
         rf"(# ?<{tag}>\s*\n)(.*?)(# ?</{tag}>)",
         lambda m: (
-            m.group(1) + re.sub(r"^# ?", "", m.group(2), flags=re.MULTILINE) + m.group(3)
+            m.group(1)
+            + re.sub(r"^# ?", "", m.group(2), flags=re.MULTILINE)
+            + m.group(3)
         ),
         lines,
         flags=re.DOTALL,

@@ -1,53 +1,49 @@
 """Command-line tool for synchronizing formulas with a Grist document."""
 
 import os
-import re
 import sys
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from argparse import SUPPRESS, ArgumentParser, RawDescriptionHelpFormatter
 from collections.abc import Iterable
 from pathlib import Path
 
 import dotenv
-from grist_api import GristDocAPI
 
-from . import OutputName, render, sync
+from . import OutputName, map, render, sync
+from .config import Settings
 
 
 def parse_args(cli_args: Iterable[str] = ["config"]):
 
     dotenv.load_dotenv(Path.cwd() / ".env")
 
-    parser = ArgumentParser(prog="gr")
+    parser = ArgumentParser(prog="gr", argument_default=SUPPRESS)
     parser.add_argument(
         "--server",
-        default=os.getenv("GRIST_SYNC_SERVER", "https://docs.getgrist.com"),
         help="Grist server URL",
     )
     parser.add_argument(
         "--api-key",
-        default=os.getenv("GRIST_SYNC_API_KEY", ".secrets/.grist-api-key"),
         help="Grist API key or secret file path",
     )
     parser.add_argument(
         "-d",
         "--doc",
-        default=os.getenv("GRIST_SYNC_DOC_ID"),
+        dest="doc_id",
         help="Grist document ID",
     )
     parser.add_argument(
         "-o",
         "--outdir",
         type=Path,
-        default=Path(os.getenv("GRIST_SYNC_OUTDIR", ".grist/{doc}/{table}")),
-        help="Output directory (default: %(default)s)",
+        help="Output directory (default: .grist/{doc}/{table})",
     )
     parser.add_argument(
         "-w",
         "--basedir",
+        dest="source",
         type=Path,
         metavar="SOURCE",
-        default=Path(os.getenv("GRIST_SYNC_SOURCE", "./formulas")),
-        help="Source directory for render (default: %(default)s)",
+        help="Source directory for render (default: formulas)",
     )
 
     subparsers = parser.add_subparsers(
@@ -59,44 +55,22 @@ def parse_args(cli_args: Iterable[str] = ["config"]):
     _add_pull_cmd(subparsers)
     _add_push_cmd(subparsers)
     _add_sync_cmd(subparsers)
+    _add_map_cmd(subparsers)
     _add_config_cmd(subparsers)
 
     args = parser.parse_args(cli_args)
-
-    if os.path.isfile(args.api_key):
-        with open(args.api_key) as f:
-            args.api_key = f.read().strip()
-
-    api = args.api = GristDocAPI(args.doc, api_key=args.api_key, server=args.server)
-    args.doc_name = api.call("").json()["name"]  # type: ignore
-
-    table_ids = [t["id"] for t in api.call("tables").json()["tables"]]
-    args.table_id = _select_tables(table_ids, args.table_id, False)
-
-    args.outdir = Path(str(args.outdir).format(doc=args.doc_name, table=args.table_id))
+    values = vars(args)
+    settings = Settings(
+        **{name: values.pop(name) for name in Settings.model_fields if name in values}
+    )
+    values.update(
+        settings.model_dump(by_alias=True, exclude={"api_key"}),
+        api_key=settings.api_key.get_secret_value(),
+        api=settings.api,
+        doc_name=settings.doc_name,
+    )
 
     return args
-
-
-def _select_tables(
-    table_ids: list[str], pattern: str, multiple=False, regex=True
-) -> str | list[str]:
-
-    if regex:
-        picks = [t for t in table_ids if re.search(pattern, t, flags=re.IGNORECASE)]
-    else:
-        picks = [t for t in table_ids if t.lower() == pattern.lower()]
-    if not picks:
-        raise ValueError(f"No tables match {pattern!r}")
-    if len(picks) > 1 and not multiple:
-        if regex:
-            try:
-                return _select_tables(table_ids, pattern, regex=False, multiple=False)
-            except ValueError:
-                pass
-        raise ValueError(f"Found multiple tables matching {pattern!r}: {picks}")
-
-    return picks if multiple else picks[0]
 
 
 def _add_render_cmd(subparsers):
@@ -143,6 +117,40 @@ def _add_sync_cmd(subparsers):
     cmdparser.set_defaults(handler=sync.sync)
 
 
+def _add_map_cmd(subparsers):
+    cmdparser = subparsers.add_parser(
+        "map",
+        help="Copy/compare formulas to other tables",
+        description="Copy/compare TABLE_ID formulas to OTHER_TABLES",
+    )
+    _add_cmd_args(cmdparser, True)
+
+    for action in cmdparser._actions:
+        if action.dest == "dryrun":
+            action.help = "Compare columns only"
+        elif action.dest == "force":
+            action.help = (
+                "Overwrite formulas (commenting existing contents), "
+                "otherwise only empty columns are filled"
+            )
+
+    cmdparser.add_argument(
+        "-T",
+        "--other-tables",
+        help="Regex matching tables to compare",
+    )
+    cmdparser.add_argument(
+        "-O",
+        "--output",
+        type=str,
+        help=(
+            "Optional output CSV file (e.g. '{outdir}_compare.csv'). "
+            "If empty (default), results will be printed to stdout."
+        ),
+    )
+    cmdparser.set_defaults(handler=map.main)
+
+
 def _add_config_cmd(subparsers):
     cmdparser = subparsers.add_parser(
         "config", help="Print parsed settings (for debugging)"
@@ -150,11 +158,7 @@ def _add_config_cmd(subparsers):
     _add_cmd_args(cmdparser, True)
 
     def print_args(**args):
-        if (
-            args["api_key"]
-            and args["api_key"] != ".secrets/.grist-api-key"
-            and not Path(args["api_key"]).is_file()
-        ):
+        if args["api_key"]:
             args["api_key"] = "*****"
         print(
             "\n".join(
@@ -173,16 +177,23 @@ def _add_cmd_args(parser: ArgumentParser, edit_args=True):
         "-t",
         "--table",
         dest="table_id",
-        default=os.getenv("GRIST_SYNC_TABLE_ID", "RUC"),
+        default=SUPPRESS,
         help="Grist table ID (can be a regex that matches a single existing table)",
     )
     parser.add_argument(
         "-c",
         "--column-filter",
-        dest="filter",
-        default=os.getenv("GRIST_SYNC_COLUMN_FILTER", ".*"),
+        dest="column_filter",
+        default=SUPPRESS,
         help="Regex filter to select columns / SOURCE files "
-        "(case-insensitive), e.g. 'foo|bar', (default: %(default)s)",
+        "(case-insensitive), e.g. 'foo|bar', (default: .*)",
+    )
+    parser.add_argument(
+        "-C",
+        "--column-skip",
+        dest="anti_filter",
+        default=os.getenv("GRIST_SYNC_COLUMN_SKIP", ""),
+        help="Regex filter to skip columns / SOURCE files",
     )
     if not edit_args:
         return
@@ -195,7 +206,7 @@ def _add_cmd_args(parser: ArgumentParser, edit_args=True):
     )
     parser.add_argument(
         "-n",
-        "--dry-run",
+        "--dryrun",
         action="store_true",
         help="Do not actually push data",
     )

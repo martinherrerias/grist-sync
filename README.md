@@ -21,6 +21,8 @@ gr --help
 
 Edit `.env` with the Grist server URL, document ID, and API key, etc. The template should be self documenting.
 
+Command-line options > environment variables > `.env` values > files in `.secrets`.
+
 Use `gr config` to check if your settings are being picked up as intended.
 See `gr --help` for further information, and available commands.
 
@@ -72,6 +74,8 @@ def my_function(record: Record, table: UserTable) -> str:
 `gr push` sends rendered files to Grist after checking that local files are clean at the recorded Git revision and that server formulas have not changed since that revision.
 
 `gr sync` runs the render and push steps. Use `gr sync --force` to push despite detected conflicts.
+
+`gr map -t TEMPLATE -T TARGETS` copies columns from a `TEMPLATE` table to others. By default, only empty columns in the target tables are filled; use `-f` to overwrite existing formulas (previous contents commented out), `-n` to compare formulas only.
 
 
 ## Notes
